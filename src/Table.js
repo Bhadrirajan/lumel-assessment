@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './style.css';
 
 const Table = ({ dataObject }) => {
   const [input, setInput] = useState({});
@@ -12,24 +13,116 @@ const Table = ({ dataObject }) => {
       return acc;
     }, {})
   );
+
   const onInputChange = (id, event) => {
     setInput((prev) => ({ ...prev, [id]: event.target.value }));
   };
 
   const allocatePercentage = (id) => {
-    const inputValue = input[id] || 0;
-    setVariance((prev) => ({ ...prev, [id]: `${inputValue}%` }));
+    console.log(input[id]);
+    if (input[id] === null || '' || 'undefined') {
+      return;
+    }
+
+    setValues((prevValues) => {
+      const originalValue =
+        dataObject.rows
+          .flatMap((row) => [row, ...row.children])
+          .find((item) => item.id === id)?.value || 0;
+      console.log(originalValue);
+
+      const newValue =
+        originalValue + (originalValue * parseFloat(input[id])) / 100;
+
+      const variancePercentage =
+        ((newValue - originalValue) / originalValue) * 100;
+
+      const updatedValues = { ...prevValues, [id]: newValue };
+      const updatedVariance = {
+        ...variance,
+        [id]: variancePercentage.toFixed(2) + '%',
+      };
+
+      dataObject.rows.forEach((row) => {
+        if (row.children.some((child) => child.id === id)) {
+          const updatedParentValue = row.children.reduce(
+            (sum, child) =>
+              sum + (child.id === id ? newValue : prevValues[child.id]),
+            0
+          );
+          updatedValues[row.id] = updatedParentValue;
+
+          const originalParentValue = row.value;
+          updatedVariance[row.id] =
+            (
+              ((updatedParentValue - originalParentValue) /
+                originalParentValue) *
+              100
+            ).toFixed(2) + '%';
+        }
+      });
+
+      setVariance(updatedVariance);
+      setInput('');
+      return updatedValues;
+    });
+  };
+
+  const allocateValue = (id) => {
+    if (input[id] === null || '' || 'undefined') {
+      return;
+    }
+    setValues((prevValues) => {
+      const originalValue =
+        dataObject.rows
+          .flatMap((row) => [row, ...row.children])
+          .find((item) => item.id === id)?.value || 0;
+      console.log(originalValue);
+      const newValue = parseFloat(input[id]) || originalValue;
+
+      const variancePercentage =
+        ((newValue - originalValue) / originalValue) * 100;
+
+      const updatedValues = { ...prevValues, [id]: newValue };
+      const updatedVariance = {
+        ...variance,
+        [id]: variancePercentage.toFixed(2) + '%',
+      };
+
+      dataObject.rows.forEach((row) => {
+        if (row.children.some((child) => child.id === id)) {
+          const updatedParentValue = row.children.reduce(
+            (sum, child) =>
+              sum + (child.id === id ? newValue : prevValues[child.id]),
+            0
+          );
+          updatedValues[row.id] = updatedParentValue;
+
+          const originalParentValue = row.value;
+          updatedVariance[row.id] =
+            (
+              ((updatedParentValue - originalParentValue) /
+                originalParentValue) *
+              100
+            ).toFixed(2) + '%';
+        }
+      });
+
+      setVariance(updatedVariance);
+      setInput('');
+      return updatedValues;
+    });
   };
 
   return (
-    <table border="1" style={{ borderCollapse: 'collapse', width: '80%' }}>
+    <table border="1" style={{ borderCollapse: 'collapse', width: '100%' }}>
       <thead>
         <tr>
           <th>Label</th>
           <th>Value</th>
           <th>Input</th>
-          <th>Allocation %</th>
-          <th>Allocation Val</th>
+          <th>Allocation percentage</th>
+          <th>Allocation Value</th>
           <th>Variance %</th>
         </tr>
       </thead>
@@ -47,12 +140,14 @@ const Table = ({ dataObject }) => {
                 />
               </td>
               <td>
-                <button onClick={() => allocatePercentage(row.id)}>
-                  Allocation %
+                <button id="percent" onClick={() => allocatePercentage(row.id)}>
+                  Allocation percentage for {row.label}
                 </button>
               </td>
               <td>
-                <button>Allocation value</button>
+                <button id="value" onClick={() => allocateValue(child.id)}>
+                  Allocate value for {row.label}
+                </button>
               </td>
               <td>{variance[row.id] || '0%'}</td>
             </tr>
@@ -68,13 +163,16 @@ const Table = ({ dataObject }) => {
                   />
                 </td>
                 <td>
-                  <button onClick={() => allocatePercentage(child.id)}>
-                    Allocation %
+                  <button
+                    id="percent"
+                    onClick={() => allocatePercentage(child.id)}
+                  >
+                    Allocation percentage for {child.label}
                   </button>
                 </td>
                 <td>
-                  <button onClick={() => allocateValue(child.id)}>
-                    Allocation value
+                  <button id="value" onClick={() => allocateValue(child.id)}>
+                    Allocate value for {child.label}
                   </button>
                 </td>
                 <td>{variance[child.id] || '0%'}</td>
